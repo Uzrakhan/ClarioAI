@@ -1,0 +1,39 @@
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.secret
+*.secrets
+credentials.*
+*.pem
+*.key
+
+# Python virtual environments and cache files
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Node.js and Next.js
+node_modules/
+.next/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
