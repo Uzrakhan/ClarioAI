@@ -1,0 +1,19 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { Icon } from "@/components/icon";
+import { PageHeading, Status } from "@/components/ui";
+import { documents, patientForDocument } from "@/lib/mock-data";
+
+export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const document = documents.find((item) => item.id === id);
+  if (!document) notFound();
+  const patient = patientForDocument(document);
+  return <AppShell>
+    <PageHeading eyebrow="Document insight" title="AI report summary" description="A structured place for findings and observations associated with a document." action={<Link href={`/patients/${document.patientId}`} className="button button-secondary">Patient record <Icon name="external" size={14} /></Link>} />
+    <div className="panel" style={{ marginBottom: 16 }}><div className="panel-header"><div style={{ display: "flex", alignItems: "center", gap: 11 }}><span className="file-icon"><Icon name="file" size={16} /></span><div><h2 className="panel-title">{document.name}</h2><p className="panel-description">{patient?.name} · Uploaded {document.date} · {document.kind}</p></div></div><Status status={document.status} /></div><div style={{ padding: "11px 19px", background: "#faf9f5", color: "#756e5c", fontSize: 10, lineHeight: 1.55 }}>Sample report layout. The text below is fictional placeholder content; no document has been analyzed and no clinical conclusions are being made.</div></div>
+    <div className="summary-grid"><section className="panel"><div className="panel-header"><div><h2 className="panel-title">Extracted findings</h2><p className="panel-description">Structured fields that an approved workflow could populate</p></div><span className="mock-label">PLACEHOLDER</span></div><div className="summary-section"><h3 className="summary-heading"><Icon name="clipboard" size={15} /> Document overview</h3><p>This sample record is labeled as a routine laboratory report. In a connected workflow, this section would summarize document type, collection date, and source organization after verification.</p></div><div className="summary-section"><h3 className="summary-heading"><Icon name="activity" size={15} /> Key observations</h3><div className="observation"><Icon name="check" size={15} className="observation-mark" /><span>Observation placeholder — values and interpretation are not available in demo mode.</span></div><div className="observation"><Icon name="clock" size={15} className="observation-mark" /><span>Review status: pending clinician review in this sample layout.</span></div></div><div className="summary-section"><h3 className="summary-heading"><Icon name="note" size={15} /> Summary</h3><p>A concise, plain-language summary would appear here after document processing is implemented. This placeholder should not be used to guide care.</p></div></section>
+      <aside className="panel"><div className="panel-header"><div><h2 className="panel-title">Record details</h2><p className="panel-description">Source information</p></div></div><div className="summary-section"><div className="info-field-label">Patient</div><div className="info-field-value"><Link href={`/patients/${document.patientId}`}>{patient?.name}</Link></div></div><div className="summary-section"><div className="info-field-label">Document date</div><div className="info-field-value">{document.date}</div></div><div className="summary-section"><div className="info-field-label">File details</div><div className="info-field-value">{document.kind} · {document.size}</div></div><div className="summary-section"><div className="info-field-label">Processing</div><div className="info-field-value">Not connected</div></div><p className="notice">ClarioAI’s AI processing is not implemented in this frontend preview.</p></aside></div>
+  </AppShell>;
+}

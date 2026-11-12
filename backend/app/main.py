@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import health,database
+from app.api.routes import auth, database, health
 
 app = FastAPI(
     title="ClarioAI API",
@@ -20,6 +20,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(database.router)
+app.include_router(auth.router)
 
 
 @app.get("/")
