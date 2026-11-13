@@ -338,19 +338,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .auth-card > .eyebrow { margin: 0 0 8px; color: #768379; text-align: center; }
 .auth-card h1 { margin: 0; color: #2c3730; text-align: center; font-size: 23px; line-height: 1.3; letter-spacing: -.04em; }
 .auth-copy { margin: 9px 0 25px; color: #738078; text-align: center; font-size: 12px; line-height: 1.65; }
-.auth-form { display: grid; gap: 15px; }
-.auth-field { display: grid; gap: 7px; }
-.auth-field .input { width: 100%; min-height: 43px; }
-.auth-field-hint { color: #89938b; font-size: 10px; }
-.auth-forgot { margin-top: -7px; text-align: right; font-size: 10px; }
-.auth-forgot a { color: var(--green); font-weight: 600; }
-.auth-show-password { display: flex; align-items: center; gap: 8px; color: #66736a; font-size: 10px; cursor: pointer; }
-.auth-show-password input { width: 14px; height: 14px; accent-color: var(--green); }
 .auth-message { margin: 0; padding: 10px 11px; border: 1px solid; border-radius: 5px; font-size: 11px; line-height: 1.55; }
 .auth-message-error { color: #8a4038; background: #fbf1ef; border-color: #eed7d3; }
-.auth-message-success { color: #345d47; background: #f0f5f0; border-color: #d9e7dc; }
-.auth-submit { width: 100%; justify-content: center; min-height: 43px; gap: 9px; margin-top: 2px; }
-.auth-submit:disabled { opacity: .65; cursor: wait; }
+.auth-google-button { width: 100%; min-height: 46px; justify-content: center; gap: 11px; margin-top: 7px; color: #344139; background: #fff; border: 1px solid #dce2dc; font-size: 12px; font-weight: 650; box-shadow: 0 1px 2px #24372d0a; }
+.auth-google-button:hover:not(:disabled) { background: #f8faf8; border-color: #bbc9be; }
+.auth-google-button:disabled { opacity: .65; cursor: wait; }
+.auth-provider-note { margin: 13px 0 0; color: #818b83; text-align: center; font-size: 10px; line-height: 1.6; }
 .auth-switch { margin: 18px 0 0; color: #7b857e; font-size: 10px; }
 .auth-card .auth-switch { text-align: center; }
 .auth-switch a { color: var(--green); font-weight: 650; }

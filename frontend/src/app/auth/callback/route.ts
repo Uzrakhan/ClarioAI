@@ -1,28 +1,53 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabasePublicConfig } from "@/lib/supabase/config";
+import { classifyOAuthFailure } from "@/lib/oauth-messages";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
 export async function GET(request: NextRequest) {
-  const url = request.nextUrl.clone();
-  const code = url.searchParams.get("code");
-  const nextPath = safeRedirectPath(url.searchParams.get("next"));
-
-  if (!code) {
-    url.pathname = "/login";
-    url.search = "";
-    url.searchParams.set("message", "confirmation");
-    return NextResponse.redirect(url);
+  const requestUrl = new URL(request.url);
+  const nextPath = safeRedirectPath(requestUrl.searchParams.get("next"));
+  const failure = classifyOAuthFailure(requestUrl.searchParams.get("error"), requestUrl.searchParams.get("error_code"));
+  if (failure) {
+    return redirectToLogin(request, nextPath, failure);
   }
 
+  const code = requestUrl.searchParams.get("code");
+  if (!code) return redirectToLogin(request, nextPath, "failed");
+
+  const config = getSupabasePublicConfig();
+  if (!config) return redirectToLogin(request, nextPath, "configuration");
+
+  const pendingCookies: Array<{ name: string; value: string; options: Parameters<NextResponse["cookies"]["set"]>[2] }> = [];
+  const supabase = createServerClient(config.url, config.publishableKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach((cookie) => pendingCookies.push(cookie));
+      },
+    },
+  });
+
+  let exchangeFailed = false;
   try {
-    const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) throw error;
-    return NextResponse.redirect(new URL(nextPath, request.url));
+    exchangeFailed = Boolean(error);
   } catch {
-    url.pathname = "/login";
-    url.search = "";
-    url.searchParams.set("message", "confirmation");
-    return NextResponse.redirect(url);
+    exchangeFailed = true;
   }
+  const response = exchangeFailed
+    ? redirectToLogin(request, nextPath, "failed")
+    : NextResponse.redirect(new URL(nextPath, request.url));
+
+  pendingCookies.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+  return response;
+}
+
+function redirectToLogin(request: NextRequest, nextPath: string, reason: "cancelled" | "failed" | "configuration") {
+  const loginUrl = new URL("/login", request.url);
+  loginUrl.searchParams.set("oauth", reason);
+  if (nextPath !== "/dashboard") loginUrl.searchParams.set("next", nextPath);
+  return NextResponse.redirect(loginUrl);
 }

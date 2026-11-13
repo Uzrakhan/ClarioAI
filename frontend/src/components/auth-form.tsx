@@ -1,126 +1,63 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icon";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { safeRedirectPath } from "@/lib/safe-redirect";
+import { oauthErrorMessage } from "@/lib/oauth-messages";
 
 type AuthFormProps = { mode: "login" | "signup" };
 
-function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function getLoginErrorMessage(code?: string) {
-  if (code === "email_not_confirmed") {
-    return "Please verify your email using the link we sent before signing in. You can request another confirmation email by signing up again.";
-  }
-  if (code === "invalid_credentials" || code === "bad_auth_credentials") {
-    return "The email or password is incorrect. Check your details and try again.";
-  }
-  return "We couldn't sign you in right now. Check your connection and try again.";
-}
-
-function getSignupErrorMessage(code?: string) {
-  if (code === "email_exists" || code === "user_already_exists") {
-    return "An account may already use this email. Try signing in or use Forgot password.";
-  }
-  if (code === "weak_password") {
-    return "Choose a stronger password that meets your Supabase password requirements.";
-  }
-  return "We couldn't create your account right now. Check your details and try again.";
+function GoogleMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 48 48" width="19" height="19">
+      <path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5.1h6.7c3.9-3.6 6-8.8 6-15Z" />
+      <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.1c-1.9 1.3-4.1 2-6.8 2-5.2 0-9.7-3.5-11.3-8.2H5.8v5.2A20 20 0 0 0 24 44Z" />
+      <path fill="#FBBC05" d="M12.7 27.9a12 12 0 0 1 0-7.7V15H5.8a20 20 0 0 0 0 18.1l6.9-5.2Z" />
+      <path fill="#EA4335" d="M24 12c3 0 5.7 1 7.8 3.1l5.9-5.9A19.7 19.7 0 0 0 24 4 20 20 0 0 0 5.8 15l6.9 5.2C14.3 15.5 18.8 12 24 12Z" />
+    </svg>
+  );
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignup = mode === "signup";
-  const router = useRouter();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("setup") === "required") {
-      setError("Authentication is not configured yet. Add the two public Supabase settings to frontend/.env.local and restart the app.");
-    } else if (params.get("message") === "confirmation") {
-      setSuccess("Your confirmation link could not be completed. Request a fresh link or sign in if your email is already confirmed.");
+      setError("Authentication is not configured yet. Add the public Supabase settings to frontend/.env.local and restart the app.");
+      return;
     }
+    setError(oauthErrorMessage(params.get("oauth")));
   }, []);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function continueWithGoogle() {
     setError("");
-    setSuccess("");
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (isSignup && fullName.trim().length < 2) {
-      setError("Enter your full name to continue.");
-      return;
-    }
-    if (!isValidEmail(cleanEmail)) {
-      setError("Enter a valid email address.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Your password must be at least 8 characters.");
-      return;
-    }
-    if (isSignup && password !== confirmPassword) {
-      setError("The passwords do not match.");
-      return;
-    }
     if (!isSupabaseConfigured()) {
-      setError("Authentication is not configured yet. Add the two public Supabase settings to frontend/.env.local and restart the app.");
+      setError("Authentication is not configured yet. Add the public Supabase settings to frontend/.env.local and restart the app.");
       return;
     }
 
     setPending(true);
     try {
-      const supabase = createClient();
-      if (isSignup) {
-        const callback = new URL("/auth/callback", window.location.origin);
-        callback.searchParams.set("next", "/dashboard");
-        const { data, error: signupError } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: { full_name: fullName.trim() },
-            emailRedirectTo: callback.toString(),
-          },
-        });
+      const nextPath = safeRedirectPath(new URLSearchParams(window.location.search).get("next"));
+      const callback = new URL("/auth/callback", window.location.origin);
+      callback.searchParams.set("next", nextPath);
+      const { error: oauthError } = await createClient().auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: callback.toString() },
+      });
 
-        if (signupError) {
-          setError(getSignupErrorMessage(signupError.code));
-          return;
-        }
-        if (data.session) {
-          router.replace(safeRedirectPath(new URLSearchParams(window.location.search).get("next")));
-          router.refresh();
-          return;
-        }
-        setSuccess("Check your inbox for a confirmation link. Verify your email to finish creating your account. If you already have an account, sign in or use Forgot password.");
-        return;
+      if (oauthError) {
+        setError("Google sign-in could not be started. Please try again.");
+        setPending(false);
       }
-
-      const { error: loginError } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
-      if (loginError) {
-        setError(getLoginErrorMessage(loginError.code));
-        return;
-      }
-      router.replace(safeRedirectPath(new URLSearchParams(window.location.search).get("next")));
-      router.refresh();
     } catch {
-      setError(isSignup ? getSignupErrorMessage() : getLoginErrorMessage());
-    } finally {
+      setError("We couldn't connect to Google sign-in. Check your connection and try again.");
       setPending(false);
     }
   }
@@ -141,42 +78,15 @@ export function AuthForm({ mode }: AuthFormProps) {
         <h1 id="auth-title">{isSignup ? "Create your ClarioAI account" : "Welcome back"}</h1>
         <p className="auth-copy">{isSignup ? "A thoughtful place to keep care records organized." : "Sign in to return to your care workspace."}</p>
 
-        <form className="auth-form" onSubmit={submit} noValidate>
-          {isSignup && (
-            <div className="auth-field">
-              <label className="form-label" htmlFor="full-name">Full name</label>
-              <input id="full-name" className="input" type="text" autoComplete="name" required maxLength={120} value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" />
-            </div>
-          )}
-          <div className="auth-field">
-            <label className="form-label" htmlFor="email">Email address</label>
-            <input id="email" className="input" type="email" autoComplete="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" />
-          </div>
-          <div className="auth-field">
-            <label className="form-label" htmlFor="password">Password</label>
-            <input id="password" className="input" type={showPassword ? "text" : "password"} autoComplete={isSignup ? "new-password" : "current-password"} required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} placeholder={isSignup ? "At least 8 characters" : "Enter your password"} />
-            {isSignup && <span className="auth-field-hint">Use at least 8 characters.</span>}
-          </div>
-          {isSignup ? (
-            <div className="auth-field">
-              <label className="form-label" htmlFor="confirm-password">Confirm password</label>
-              <input id="confirm-password" className="input" type={showPassword ? "text" : "password"} autoComplete="new-password" required minLength={8} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Re-enter your password" />
-            </div>
-          ) : (
-            <div className="auth-forgot"><Link href="/reset-password">Forgot password?</Link></div>
-          )}
-          <label className="auth-show-password"><input type="checkbox" checked={showPassword} onChange={(event) => setShowPassword(event.target.checked)} /> Show password</label>
-          {error && <p className="auth-message auth-message-error" role="alert">{error}</p>}
-          {success && <p className="auth-message auth-message-success" role="status" aria-live="polite">{success}</p>}
-          <button className="button button-primary auth-submit" type="submit" disabled={pending}>
-            {pending ? (isSignup ? "Creating account…" : "Signing in…") : (isSignup ? "Create account" : "Sign in")}
-            {!pending && <Icon name="arrow" size={14} />}
-          </button>
-        </form>
-
+        {error && <p className="auth-message auth-message-error" role="alert">{error}</p>}
+        <button className="button auth-google-button" type="button" onClick={continueWithGoogle} disabled={pending}>
+          <GoogleMark />
+          <span>{pending ? "Connecting to Google…" : "Continue with Google"}</span>
+        </button>
+        <p className="auth-provider-note">Continue securely with your Google account. ClarioAI uses Supabase to manage your session.</p>
         <p className="auth-switch">{isSignup ? "Already have an account?" : "New to ClarioAI?"} <Link href={isSignup ? "/login" : "/signup"}>{isSignup ? "Sign in" : "Create an account"}</Link></p>
       </section>
-      <p className="auth-disclaimer">Use your account to access ClarioAI. Never share your password with anyone.</p>
+      <p className="auth-disclaimer">Use your account to access ClarioAI. Never share your Google password with anyone.</p>
     </main>
   );
 }

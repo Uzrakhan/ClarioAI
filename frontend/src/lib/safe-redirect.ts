@@ -1,5 +1,5 @@
 const LOCAL_ORIGIN = "https://clarioai.local";
-const AUTH_PATHS = new Set(["/login", "/signup", "/auth/callback"]);
+const AUTH_PATHS = new Set(["/login", "/signup"]);
 
 export function safeRedirectPath(candidate: string | null | undefined, fallback = "/dashboard") {
   if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) return fallback;

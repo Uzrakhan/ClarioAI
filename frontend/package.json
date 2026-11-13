@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test:auth": "node --experimental-strip-types --test tests/oauth-messages.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

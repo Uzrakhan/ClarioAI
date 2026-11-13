@@ -14,7 +14,7 @@ function redirectWithRefreshedCookies(response: NextResponse, destination: URL) 
 }
 
 function isProtectedPath(pathname: string) {
-  return ["/dashboard", "/patients", "/documents", "/upload", "/reports", "/reset-password/update"]
+  return ["/dashboard", "/patients", "/documents", "/upload", "/reports"]
     .some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
@@ -82,7 +82,5 @@ export const config = {
     "/reports/:path*",
     "/login",
     "/signup",
-    "/reset-password/:path*",
-    "/auth/callback",
   ],
 };
